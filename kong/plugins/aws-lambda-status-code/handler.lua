@@ -153,10 +153,20 @@ function AWSLambdaStatusCodeHandler:access(conf)
     if content_type:find("application/json", nil, true) then
       params, err = cjson.decode(body)
       local statusCode = params.statusCode
+      local respHeaders = params.headers
       local resource   = params.resource
       if statusCode ~= nil then
         ngx.header['X-lambda-original-status'] = res.status
         ngx.status = statusCode
+      end
+      if respHeaders ~= nil then
+        -- If this is provided, proxy all the response headers back
+        -- as part of the gateway response. In case of duplicate headers,
+        -- values returned by the lambda function takes precedence
+        -- over values we set.
+        for k, v in pairs(respHeaders) do
+          headers[k] = v
+        end
       end
       if resource ~= nil then
         -- As we're changing the body size, we can't set this header.
